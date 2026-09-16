@@ -24,8 +24,3 @@
 ## Flujo
 CSV -> auditor (MiMo) -> finanzas (Ling) -> dev (GPT-5 Codex) + vendedor (Muse) en paralelo -> reporter (Kimi) -> /output
 
-## Costo
-$0 con tokens ilimitados free. Cuando escales, pasa a Claude Sonnet 4.5 / GPT-5.5 pagos.
-
-## Siguiente paso
-Crear cron que cada 6hs reprocese uploads nuevos.

@@ -228,6 +228,10 @@ export function getStorage(): StorageIO {
   const dbUrl = process.env.DATABASE_URL;
   if (dbUrl && process.env.DATA_STORE !== "fs") {
     cached = new PostgresStore(dbUrl);
+  } else if (process.env.VERCEL) {
+    throw new Error(
+      "Falta DATABASE_URL. En Vercel: Settings → Environment Variables → DATABASE_URL con la URI de Supabase (Postgres)."
+    );
   } else {
     cached = new FileSystemStore();
   }

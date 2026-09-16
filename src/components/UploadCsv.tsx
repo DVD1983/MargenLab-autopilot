@@ -15,6 +15,28 @@ export default function UploadCsv() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const EXT_OK = [".csv", ".xlsx", ".xls"];
+
+  function pickFile(f: File | undefined) {
+    if (!f) return;
+    const ext = f.name.includes(".")
+      ? "." + f.name.split(".").pop()!.toLowerCase()
+      : "";
+    if (!EXT_OK.includes(ext)) {
+      setError("Formato no soportado. Usá CSV (.csv) o Excel (.xlsx/.xls)");
+      return;
+    }
+    setError(null);
+    setArchivo(f);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    pickFile(e.dataTransfer.files?.[0]);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,11 +111,27 @@ export default function UploadCsv() {
           <div>
             <label
               htmlFor="file"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/40 px-6 py-12 text-center transition hover:border-margen"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-12 text-center transition ${
+                dragOver
+                  ? "border-margen bg-margen/10"
+                  : "border-slate-700 bg-slate-950/40 hover:border-margen"
+              }`}
             >
               <span className="text-3xl">📦</span>
               <span className="text-sm font-semibold">
-                {archivo ? archivo.name : "Hacé click para elegir el archivo"}
+                {archivo
+                  ? archivo.name
+                  : "Arrastrá el archivo acá o hacé click para elegirlo"}
               </span>
               <span className="text-xs text-slate-500">
                 .csv · .xlsx · .xls — cualquier tamaño (columnas: pedido,
@@ -106,7 +144,7 @@ export default function UploadCsv() {
               type="file"
               accept=".csv,.xlsx,.xls"
               className="hidden"
-              onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+              onChange={(e) => pickFile(e.target.files?.[0])}
             />
           </div>
         ) : (

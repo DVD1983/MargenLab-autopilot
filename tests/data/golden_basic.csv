@@ -1,0 +1,3 @@
+id_pedido,fecha,producto,categoria,cantidad,precio,estado
+1,2026-01-01,Vela,Velas,2,5000,pagado
+2,2026-01-02,Jabon,Jabones,1,3000,cancelado

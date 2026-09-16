@@ -3,9 +3,9 @@ import {
   fetchGoogleSheetsCsv,
   parseBuffer,
   parseCsvText,
-  runPipeline,
   sanitizeCliente,
 } from "@/lib/pipeline";
+import { runPipeline } from "@/lib/run";
 
 export const dynamic = "force-dynamic";
 

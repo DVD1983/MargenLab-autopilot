@@ -1,33 +1,19 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { analizeRows, parseBuffer, parseCsvText, sanitizeCliente } from "@/lib/pipeline";
+import { getStorage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-const ROOT = process.cwd();
-const UPLOADS_DIR = path.join(ROOT, "data", "uploads");
-const PROCESSED_DIR = path.join(ROOT, "data", "processed");
 
 type Uploaded = { file: string; rows: Record<string, unknown>[] };
 
 async function loadUpload(cliente: string): Promise<Uploaded | null> {
-  let files: string[];
-  try {
-    files = await fs.readdir(UPLOADS_DIR);
-  } catch {
-    return null;
-  }
-  const target = files.find((f) =>
-    /^[^.]+\.(csv|xlsx|xls)$/i.test(f) &&
-    sanitizeCliente(f) === cliente
-  );
-  if (!target) return null;
-  const buf = new Uint8Array(await fs.readFile(path.join(UPLOADS_DIR, target)));
-  const ext = target.split(".").pop()?.toLowerCase();
+  const orig = await getStorage().readUpload(cliente);
+  if (!orig) return null;
+  const buf = Buffer.from(orig.bytes);
+  const ext = orig.name.split(".").pop()?.toLowerCase();
   const rows =
-    ext === "csv" ? parseCsvText(Buffer.from(buf).toString("utf-8")) : parseBuffer(buf);
-  return { file: target, rows };
+    ext === "csv" ? parseCsvText(buf.toString("utf-8")) : parseBuffer(buf);
+  return { file: orig.name, rows };
 }
 
 function compareNum(label: string, got: unknown, want: number | undefined): string | null {
@@ -71,13 +57,8 @@ export async function GET(
     return res({ ok: false, razon: "analisis_error", error: "No se pudo re-analizar el archivo" });
   }
 
-  const finPath = path.join(PROCESSED_DIR, `${cliente}_finanzas.json`);
-  const hallPath = path.join(PROCESSED_DIR, `${cliente}_hallazgos.json`);
-  const [rawFinanzas, rawHallazgos] = await Promise.all([
-    fs.readFile(finPath, "utf-8").catch(() => null),
-    fs.readFile(hallPath, "utf-8").catch(() => null),
-  ]);
-  if (!rawFinanzas || !rawHallazgos) {
+  const guardado = await getStorage().get(cliente);
+  if (!guardado) {
     return res({
       ok: false,
       razon: "sin_analisis",
@@ -85,8 +66,8 @@ export async function GET(
     });
   }
 
-  const savedF = JSON.parse(rawFinanzas) as Record<string, unknown>;
-  const savedH = JSON.parse(rawHallazgos) as Record<string, unknown>;
+  const savedF = guardado.finanzas as Record<string, unknown>;
+  const savedH = guardado.hallazgos as Record<string, unknown>;
   const calcF = analizado.finanzas;
   const calcH = analizado.hallazgos;
 

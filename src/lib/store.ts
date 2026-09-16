@@ -1,7 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const DATA_DIR = path.join(process.cwd(), "data", "processed");
+import { getStorage } from "@/lib/storage";
 
 export interface Pedido {
   id_pedido: number;
@@ -82,26 +79,7 @@ export interface StoreData {
 }
 
 export async function listStores(): Promise<string[]> {
-  try {
-    const files = await fs.readdir(DATA_DIR);
-    const stores = new Set<string>();
-    for (const f of files) {
-      const m = f.match(/^(.+?)_finanzas\.json$/);
-      if (m) stores.add(m[1]);
-    }
-    return Array.from(stores).sort();
-  } catch {
-    return [];
-  }
-}
-
-async function readJson<T>(rel: string): Promise<T | null> {
-  try {
-    const raw = await fs.readFile(path.join(DATA_DIR, rel), "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
+  return getStorage().list();
 }
 
 function buildDiario(orders: Pedido[]): DiaPoint[] {
@@ -119,12 +97,11 @@ function buildDiario(orders: Pedido[]): DiaPoint[] {
 }
 
 export async function getStore(clientId: string): Promise<StoreData | null> {
-  const [finanzas, hallazgos, orders] = await Promise.all([
-    readJson<Finanzas>(`${clientId}_finanzas.json`),
-    readJson<Hallazgos>(`${clientId}_hallazgos.json`),
-    readJson<Pedido[]>(`${clientId}_clean.json`),
-  ]);
-  if (!finanzas || !hallazgos || !orders) return null;
+  const stored = await getStorage().get(clientId);
+  if (!stored) return null;
+  const finanzas = stored.finanzas as Finanzas;
+  const hallazgos = stored.hallazgos as Hallazgos;
+  const orders = stored.clean as Pedido[];
   return {
     id: clientId,
     finanzas,

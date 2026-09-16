@@ -1,11 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { parse as parseCsv } from "csv-parse/sync";
 import * as XLSX from "xlsx";
-
-const ROOT = process.cwd();
-const UPLOADS_DIR = path.join(ROOT, "data", "uploads");
-const PROCESSED_DIR = path.join(ROOT, "data", "processed");
 
 const REQUIRED_COLUMNS = [
   "id_pedido",
@@ -534,14 +528,6 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-async function writeJson(rel: string, data: unknown): Promise<void> {
-  await fs.writeFile(
-    path.join(PROCESSED_DIR, rel),
-    JSON.stringify(data, null, 2),
-    "utf-8"
-  );
-}
-
 export interface ColumnFlags {
   hasIngreso: boolean;
   hasChurn: boolean;
@@ -591,42 +577,6 @@ export function analizeRows(
     hallazgos: computeHallazgos(clean, cliente),
     finanzas: computeFinanzas(clean, cliente, avail),
     avail,
-  };
-}
-
-export async function runPipeline(
-  cliente: string,
-  rows: Record<string, unknown>[],
-  origen: UploadResult["origen"],
-  contenidoOriginal?: Uint8Array,
-  uploadFileName?: string
-): Promise<UploadResult> {
-  await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  await fs.mkdir(PROCESSED_DIR, { recursive: true });
-
-  const { clean, hallazgos, finanzas } = analizeRows(cliente, rows);
-
-  await Promise.all([
-    writeJson(`${cliente}_clean.json`, clean),
-    writeJson(`${cliente}_hallazgos.json`, hallazgos),
-    writeJson(`${cliente}_finanzas.json`, finanzas),
-  ]);
-
-  const uploadPath = path.join(UPLOADS_DIR, uploadFileName ?? `${cliente}.csv`);
-  const existed = await fs.stat(uploadPath).catch(() => null);
-  if (contenidoOriginal) {
-    await fs.writeFile(uploadPath, contenidoOriginal);
-  }
-
-  const hallazgosT = hallazgos as { pagados: number; cancelados: number; categorias: unknown[] };
-  return {
-    cliente,
-    pedidos: hallazgosT.pagados + hallazgosT.cancelados,
-    pagados: hallazgosT.pagados,
-    cancelados: hallazgosT.cancelados,
-    categorias: hallazgosT.categorias.length,
-    updated: !!existed,
-    origen,
   };
 }
 
